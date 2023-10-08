@@ -19,6 +19,7 @@ class Population:
         self.N = len(cities)
         self.p_kross = p_kross
         self.p_mut = p_mut
+        self.numbers = []
 
         for i in range(power):
             route = [0]
@@ -26,10 +27,11 @@ class Population:
                 route.append(random.randint(0, self.N - j - 1))
             self.population.append(route)
 
+        for i in range(self.N):
+            self.numbers.append(i)
+
     def decode_route(self, route):
-        numbers = []
-        for i in range(len(self.cities)):
-            numbers.append(i)
+        numbers = self.numbers.copy()
         new_route = []
         for i in range(0, self.N):
             new_route.append(numbers[route[i]])
@@ -38,9 +40,7 @@ class Population:
 
     def encode_route(self, route):
 
-        numbers = []
-        for i in range(len(self.cities)):
-            numbers.append(i)
+        numbers = self.numbers.copy()
 
         new_route = []
 
@@ -52,9 +52,7 @@ class Population:
         return new_route
 
     def dist_route(self, route):
-        numbers = []
-        for i in range(89):
-            numbers.append(i)
+        numbers = self.numbers.copy()
         sum = 0
         current_city = self.cities[numbers[route[0]]]
         numbers.remove(numbers[route[0]])
@@ -90,7 +88,6 @@ class Population:
         self.population = new_population
 
     def crossover(self):
-        #start_time = time.time()
         pairs = []
 
         for i in range(0, len(self.population) - 1, 2):
@@ -105,7 +102,6 @@ class Population:
         for res in results:
             self.population[res[0]] = res[1]
             self.population[res[0]] = res[2]
-        #print("cross time:", time.time() - start_time)
 
     def crossover_worker(self, pair):
         index, individual1, individual2 = pair
@@ -143,8 +139,7 @@ class Population:
 
         return best_route
 
-    def mutation(self, p):
-        start_time = time.time()
+    def mutation(self):
         pool = multiprocessing.Pool(processes=8)
 
         individuals = []
@@ -159,7 +154,6 @@ class Population:
         pool.join()
         for res in results:
             self.population[res[0]] = res[1]
-        print("mutation time:", time.time() - start_time)
 
     def mutation_worker(self, individual):
         index, inv = individual
@@ -170,24 +164,63 @@ class Population:
 
         route1 = self.optimization_2opt(self.decode_route(inv))
         return index, self.encode_route(route1)
+
+    def form_elite(self, elite_population):
+        values = []
+        for j in self.population:
+            values.append((self.dist_route(j), j))
+        values.sort()
+        index = 0
+        for individual in values[:int(0.01 * self.power)]:
+            if individual[0] < elite_population[index][0]:
+                elite_population[index] = individual
+                index += 1
+        return elite_population
+
+    def recover_elite(self, elite_population):
+        values = []
+        for j in self.population:
+            values.append(self.dist_route(j))
+        weakest_indices = sorted(range(len(self.population)), key=lambda i: values[i], reverse=True)[
+                          :len(elite_population)]
+        for j in range(len(weakest_indices)):
+            self.population[weakest_indices[j]] = elite_population[j][1]
+
     def start(self):
+        elite_population = []
+
+        for i in range(int(0.01 * self.power)):
+            elite_population.append((self.dist_route(self.population[i]), self.population[i]))
+
+        elite_population = self.form_elite(elite_population)
+
         for i in range(0, self.iterations):
-            start_time = time.time()
             print(i)
-            values = []
-            for i in self.population:
-                values.append(self.dist_route(i))
-            min_value = min(values)
-            print(min_value)
+
+            if i % 25 == 0 and i != 0:
+                print("here")
+                self.draw()
+                print("out")
+
             self.reproduction()
             self.crossover()
-            self.mutation(self.p_mut)
-            end_time = time.time()
-            print(end_time - start_time)
+            self.mutation()
+
+            self.recover_elite(elite_population)
+
+            elite_population = self.form_elite(elite_population)
+            values = []
+            for j in self.population:
+                values.append(self.dist_route(j))
+            min_value = min(values)
+            print(min_value)
+
+
         values = []
         for i in self.population:
             values.append(self.dist_route(i))
         min_value = min(values)
+        self.draw()
         return min_value, self.population[values.index(min_value)]
 
     def draw(self):
