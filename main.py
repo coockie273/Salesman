@@ -1,7 +1,7 @@
-import matplotlib.pyplot as plt
-import multiprocessing
+from Algorithms.Population import Population
+from Algorithms.AntSystem import AntSystem
+import math
 
-from Population import Population
 
 # Откройте файл для чтения
 with open('cities.txt', 'r') as file:
@@ -23,39 +23,23 @@ for line in lines:
 
     # Добавьте кортеж в массив
     cities.append(point)
+
+n = len(cities)
+cities_matrix = [[0 for _ in range(n)] for _ in range(n)]
+
+# Вычисляем расстояния между городами и заполняем матрицу
+for i in range(n):
+    for j in range(n):
+        if i != j:
+            x1, y1 = cities[i]
+            x2, y2 = cities[j]
+            # Вычисляем евклидово расстояние между координатами городов
+            distance = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+            cities_matrix[i][j] = distance
+
 # Создайте данные для точек
 if __name__ == "__main__":
-    route = Population(2500, 1000, 0.5, 0.1, cities).start()
-    print(route[0])
-    print(route[1])
-    route = route[1]
-    numbers = []
-    for i in range(len(cities)):
-        numbers.append(i)
-
-    x = []
-    y = []
-    for i in range(0, len(route)):
-        x.append(cities[numbers[route[i]]][0])
-        y.append(cities[numbers[route[i]]][1])
-        numbers.remove(numbers[route[i]])
-
-    x.append(x[0])
-    y.append(y[0])
-
-    # Используйте plt.scatter() для постановки точек на графике
-    plt.scatter(x, y, label='Точки')
-
-    # Используйте plt.plot() для соединения точек линией
-    plt.plot(x, y, linestyle='-', color='blue', label='Линия')
-
-    # Настройте метки осей и заголовок
-    plt.xlabel('Ось X')
-    plt.ylabel('Ось Y')
-    plt.title('График с точками и линией')
-
-    # Добавьте легенду
-    plt.legend()
-
-    # Отобразите график
-    plt.show()
+    AntSystem(100, 500, cities_matrix, cities, 0.2, 5).start()
+    # 223
+    # 6238.76003872322
+    #Population(2500, 1000, 0.5, 0.1, cities).start()

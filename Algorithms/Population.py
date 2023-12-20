@@ -20,7 +20,7 @@ class Population:
         self.p_kross = p_kross
         self.p_mut = p_mut
         self.numbers = []
-
+        # Создание начальной популяции
         for i in range(power):
             route = [0]
             for j in range(1, self.N):
@@ -80,9 +80,11 @@ class Population:
 
         probabilities = []
 
+        # Формирование вероятностей
         for individual in self.population:
             probabilities.append((1 / self.dist_route(individual)) / sum)
 
+        # Вращение колеса
         new_population = random.choices(self.population, probabilities, k=self.power)
 
         self.population = new_population
@@ -90,34 +92,43 @@ class Population:
     def crossover(self):
         pairs = []
 
+        # Выбор пар для оператора кроссинговера
         for i in range(0, len(self.population) - 1, 2):
             random_number = random.random()
             if random_number < self.p_kross:
                 pairs.append((i, self.population[i], self.population[i + 1]))
+
+        # Создание 8 потоков
         pool = multiprocessing.Pool(processes=8)
 
+        # Для каждой пары применяется оператор кроссинговера
         results = pool.map(self.crossover_worker, [pair for pair in pairs])
         pool.close()
         pool.join()
+
+        # Потомки помещаются в популяцию
         for res in results:
             self.population[res[0]] = res[1]
-            self.population[res[0]] = res[2]
+            self.population[res[0] + 1] = res[2]
 
     def crossover_worker(self, pair):
         index, individual1, individual2 = pair
 
+        # Оператор кроссинговера
         k = random.randint(0, len(individual1) - 1)
         for i in range(k, len(individual1)):
             c = individual1[i]
             individual1[i] = individual2[i]
             individual2[i] = c
-        route1 = self.optimization_2opt(self.decode_route(individual1))
-        route2 = self.optimization_2opt(self.decode_route(individual2))
 
-        individual1 = self.encode_route(route1)
-        individual2 = self.encode_route(route2)
+        # 2-opt оптимизация
+        #route1 = self.optimization_2opt(self.decode_route(individual1))
+        #route2 = self.optimization_2opt(self.decode_route(individual2))
 
-        return index, individual1, individual2,
+        #individual1 = self.encode_route(route1)
+        #individual2 = self.encode_route(route2)
+
+        return index, individual1, individual2
 
     def optimization_2opt(self, route):
         best_route = route.copy()
@@ -140,30 +151,38 @@ class Population:
         return best_route
 
     def mutation(self):
+        # Создание потоков
         pool = multiprocessing.Pool(processes=8)
 
         individuals = []
 
+        # Формирование списка особей для мутации
         for i in range(len(self.population)):
             random_number = random.random()
             if random_number < self.p_mut:
                 individuals.append((i, self.population[i]))
+        # Примение оператора мутации
         results = pool.map(self.mutation_worker, [inv for inv in individuals])
 
         pool.close()
         pool.join()
+
+        # Сохранения результата
         for res in results:
             self.population[res[0]] = res[1]
 
     def mutation_worker(self, individual):
         index, inv = individual
+
+        # Оператора мутации
         k = random.randint(1, self.N - 1)
         n = random.randint(0, self.N - 1 - k)
         for i in range(k, k + n):
             inv[i] = random.randint(0, self.N - i - 1)
 
-        route1 = self.optimization_2opt(self.decode_route(inv))
-        return index, self.encode_route(route1)
+        # 2-opt оптимизация
+        #route1 = self.optimization_2opt(self.decode_route(inv))
+        return index, inv
 
     def form_elite(self, elite_population):
         values = []
@@ -197,10 +216,8 @@ class Population:
         for i in range(0, self.iterations):
             print(i)
 
-            if i % 25 == 0 and i != 0:
-                print("here")
+            if i % 25 == 0:
                 self.draw()
-                print("out")
 
             self.reproduction()
             self.crossover()
